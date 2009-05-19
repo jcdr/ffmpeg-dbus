@@ -14,7 +14,7 @@ class FFMpeg(dbus.service.Object):
     height=128
     imrate=25
     bitrate=200
-    clip='10.0.33.1'
+    clip='10.0.33.12'
     qscale=6
     @dbus.service.method(service, in_signature='', out_signature='i')
     def start(self):

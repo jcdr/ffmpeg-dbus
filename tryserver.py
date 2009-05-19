@@ -14,10 +14,14 @@ class FFMpeg(dbus.service.Object):
     height=128
     imrate=25
     bitrate=200
+    clip='10.0.33.1'
+    qscale=6
     @dbus.service.method(service, in_signature='', out_signature='i')
     def start(self):
         print "Should start ffmpeg"
-	s='ffmpeg -f video4linux2 -s '+ str(self.width)+'x'+str(self.height)+' -r '+ str(self.imrate) +' -b '+str(self.bitrate) +' -i  /dev/video0 -vcodec mjpeg  -f avi out.avi'
+
+
+	s='ffmpeg -f video4linux2 -s '+ str(self.width)+'x'+str(self.height)+' -r '+ str(self.imrate) +' -b '+str(self.bitrate) +' -i  /dev/video0 -qscale '+str(self.qscale)+' -f mjpeg  udp:'+self.clip+':1234'
         self.p =subprocess.Popen(s, shell=True,stdout=subprocess.PIPE)
         return 0
 
@@ -25,6 +29,8 @@ class FFMpeg(dbus.service.Object):
     def stop(self):
         print "Should stop ffmpeg"
         os.kill(self.p.pid, signal.SIGTERM)
+        while self.p.poll() == 0:
+            pass
         return 0
 
     @dbus.service.method(service, in_signature='ii', out_signature='i')
@@ -64,6 +70,23 @@ class FFMpeg(dbus.service.Object):
         print "Bit_rate_get:"
 	return (self.bitrate)
 
+
+
+
+    @dbus.service.method(service, in_signature='i', out_signature='i')
+    def qscale_set(self,qscale):
+        print "qscale_set: %d"%qscale
+	self.qscale=qscale
+	return 0
+
+
+
+    @dbus.service.method(service, in_signature='', out_signature='i')
+    def qscale_get(self):
+        print "qscale_get:"
+	return (self.qscale)
+
+
   
 
     @dbus.service.method(service, in_signature='s', out_signature='i')
@@ -77,6 +100,7 @@ class FFMpeg(dbus.service.Object):
     def client_ip_get(self):
         print "client_ip_get:"
 	return (self.clip)
+
 
 
 

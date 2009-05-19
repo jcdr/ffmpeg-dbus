@@ -12,8 +12,10 @@ print '5- image_rate_set \n'
 print '6- image_rate_get \n'
 print '7- bit_rate_set \n'
 print '8- bit_rate_get \n'
-print '9- client_ip_set \n'
-print '10- client_ip_get \n'
+print '9- qscale_set \n'
+print '10- qscale_get \n'
+print '11- client_ip_set \n'
+print '12- client_ip_get \n'
 
 while True:
  x = int(raw_input("enter the number of the command: "))
@@ -40,9 +42,14 @@ while True:
  elif x == 8:
       print ffmpeg.bit_rate_get()
  elif x == 9:
+      r = int(raw_input("the qscale is: "))
+      print ffmpeg.qscale_set (r)
+ elif x == 10:
+      print ffmpeg.qscale_get()
+ elif x == 11:
       s=raw_input("the ip is: ")
       print ffmpeg.client_ip_set(s)
- elif x == 10:
+ elif x == 12:
       print ffmpeg.client_ip_get()
 
  else:

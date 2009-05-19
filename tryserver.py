@@ -14,7 +14,7 @@ class FFMpeg(dbus.service.Object):
     height=128
     imrate=25
     bitrate=200
-    clip='10.0.33.12'
+    clip='127.0.0.1'
     qscale=6
     @dbus.service.method(service, in_signature='', out_signature='i')
     def start(self):
@@ -28,8 +28,11 @@ class FFMpeg(dbus.service.Object):
     @dbus.service.method(service, in_signature='', out_signature='i')
     def stop(self):
         print "Should stop ffmpeg"
-        os.kill(self.p.pid, signal.SIGTERM)
-        while self.p.poll() == 0:
+        try:
+            os.kill(self.p.pid, signal.SIGTERM)
+            while self.p.poll() == 0:
+                pass
+        except:
             pass
         return 0
 

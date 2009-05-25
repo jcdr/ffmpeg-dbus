@@ -62,12 +62,9 @@ void image_rate_get(DBusMessage* msg, DBusConnection* conn)
 void listen()
 {
    DBusMessage* msg;
-   DBusMessage* reply;
-   DBusMessageIter args;
    DBusConnection* conn;
    DBusError err;
    int ret;
-   char* param;
 
    printf("Listening for method calls\n");
 
@@ -110,10 +107,10 @@ DBUS_NAME_FLAG_REPLACE_EXISTING , &err);
       }
 
       // check this is a method call for the right interface & method
-      if (dbus_message_is_method_call(msg, "ch.cett.misse.ffmpeg", "image_rate_get"))
+      if (dbus_message_is_method_call(msg, "ch.cett.misse.ffmpeg", "image_rate_get")) {
          image_rate_get(msg, conn);
       } else {
-	      fprintf(stderr, "Unknown message!\n");
+	      fprintf(stderr, "Unknown message: member=%s\n", dbus_message_get_member(msg));
       }
 
       // free the message

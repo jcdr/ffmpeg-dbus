@@ -1,14 +1,13 @@
 PRG=answermethod
 SRC=answermethod.c
 OBJ=$(patsubst %.c,%.o,$(SRC))
-
+PKG=dbus-1
 CFLAGS+=-std=gnu99 -Wall -pedantic -I.
 LDFLAGS+=-lm
 
 # pkg-config dbus-1.pc is broken in openembeeded. Do it manually
-CFLAGS+=-I$(PKG_CONFIG_SYSROOT_DIR)/usr/include/dbus-1.0
-CFLAGS+=-I$(PKG_CONFIG_SYSROOT_DIR)/usr/lib/dbus-1.0/include
-LDFLAGS+=-L$(PKG_CONFIG_SYSROOT_DIR)/usr/lib -ldbus-1
+CFLAGS+=`pkg-config --cflags $(PKG)`
+LDFLAGS+=`pkg-config --libs $(PKG)`
 
 all: $(PRG)
 

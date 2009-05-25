@@ -42,8 +42,8 @@ void query(char* param)
    }
 
    // request our name on the bus
-   ret = dbus_bus_request_name(conn, "test.method.caller",
-DBUS_NAME_FLAG_REPLACE_EXISTING , &err);
+   ret = dbus_bus_request_name(conn, "ch.cett.misse.ffmpeg",
+			       DBUS_NAME_FLAG_REPLACE_EXISTING , &err);
    if (dbus_error_is_set(&err)) {
       fprintf(stderr, "Name Error (%s)\n", err.message);
       dbus_error_free(&err);
@@ -55,7 +55,7 @@ DBUS_NAME_FLAG_REPLACE_EXISTING , &err);
    // create a new method call and check for errors
    msg = dbus_message_new_method_call("ch.cett.misse.ffmpeg", // target for the method call
                                       "/", // object to call on
-                                      "ch.cett.misse.Type", // interface to call on
+                                      "ch.cett.misse.ffmpeg", // interface to call on
                                       "image_rate_get"); // method name
    if (NULL == msg) {
       fprintf(stderr, "Message Null\n");

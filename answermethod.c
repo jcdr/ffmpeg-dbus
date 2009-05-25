@@ -110,8 +110,11 @@ DBUS_NAME_FLAG_REPLACE_EXISTING , &err);
       }
 
       // check this is a method call for the right interface & method
-      if (dbus_message_is_method_call(msg, "ch.cett.misse.Type", "image_rate_get"))
+      if (dbus_message_is_method_call(msg, "ch.cett.misse.ffmpeg", "image_rate_get"))
          image_rate_get(msg, conn);
+      } else {
+	      fprintf(stderr, "Unknown message!\n");
+      }
 
       // free the message
       dbus_message_unref(msg);

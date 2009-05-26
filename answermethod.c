@@ -12,7 +12,6 @@ char* clip="127.0.0.1";
 
 
 
-
 void start(DBusMessage* msg,DBusConnection* conn)
 {
 printf("video started \n");

@@ -10,13 +10,13 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 
 void image_rate_get(DBusMessage* msg, DBusConnection* conn)
 {
    DBusMessage* reply;
    DBusMessageIter args;
-   bool stat = true;
    dbus_uint32_t level = 21614;
    dbus_uint32_t serial = 0;
    char* param = "";
@@ -36,10 +36,6 @@ void image_rate_get(DBusMessage* msg, DBusConnection* conn)
 
    // add the arguments to the reply
    dbus_message_iter_init_append(reply, &args);
-   if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_BOOLEAN, &stat)) {
-      fprintf(stderr, "Out Of Memory!\n");
-      exit(1);
-   }
    if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_UINT32, &level)) {
       fprintf(stderr, "Out Of Memory!\n");
       exit(1);
@@ -107,6 +103,20 @@ DBUS_NAME_FLAG_REPLACE_EXISTING , &err);
       }
 
       // check this is a method call for the right interface & method
+
+      if (dbus_message_is_method_call(msg, "org.freedesktop.DBus.Introspectable", "Introspect")) {
+      printf("must do introspection \n");
+       static const char introspect_xml[] =
+  "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
+  "                      \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
+  "<node>\n"
+  "  <interface name=\"ch.cett.misse.ffmpeg\">\n"
+  "    <method name=\"image_rate_get\">\n"
+  "      <arg name=\"port\" direction=\"out\" type=\"u\"/>\n"
+  "    </method>\n"
+  "  </interface>\n"
+  "</node>\n";
+                                                                                                }
       if (dbus_message_is_method_call(msg, "ch.cett.misse.ffmpeg", "image_rate_get")) {
          image_rate_get(msg, conn);
       } else {
@@ -121,10 +131,10 @@ DBUS_NAME_FLAG_REPLACE_EXISTING , &err);
 
 
 
+
 int main(int argc, char** argv)
 {
-
-      listen();
-   return 0;
+listen();
+return 0;
 }
 

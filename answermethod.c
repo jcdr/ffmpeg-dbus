@@ -3,12 +3,16 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <memory.h>
 
-uint level = 21614,width=160,height=128
+
+
+int level = 21614,width=160,height=128
     ,imrate=25
     ,bitrate=200
     ,qscale=6,ok=0;
 char* clip="127.0.0.1";
+
 
 
 
@@ -19,12 +23,32 @@ printf("video started \n");
    DBusMessageIter args;
    dbus_uint32_t serial = 0;
 
-   // create a reply from the message
-   reply = dbus_message_new_method_return(msg);
+///////////////7
+
+   /* create the child */
+   int pid;
+   if ((pid = fork()) < 0)
+     {
+       printf("fork failed\n");
+       return ;
+     }
+ 
+   if (pid == 0)
+     {
+       /* child */
+
+
+       execlp("ls", "ls", (char *) 0);
+       printf("ls failed"); /* if execlp returns, it's an error */
+     }
+   else
+     {
+       /* parent */
+     reply = dbus_message_new_method_return(msg);
 
    // add the arguments to the reply
    dbus_message_iter_init_append(reply, &args);
-   if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_UINT32, &ok)) {
+   if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &ok)) {
       fprintf(stderr, "Out Of Memory!\n");
       exit(1);
    }
@@ -37,6 +61,12 @@ printf("video started \n");
 
    // free the reply
    dbus_message_unref(reply);
+
+     }
+
+
+///////////7
+
 }
 
 
@@ -50,18 +80,26 @@ void image_size_set(DBusMessage* msg,DBusConnection* conn)
    // read the arguments
    if (!dbus_message_iter_init(msg, &args))
       fprintf(stderr, "Message has no arguments!\n");
-   else if (DBUS_TYPE_UINT32 != dbus_message_iter_get_arg_type(&args))
+   else if (DBUS_TYPE_INT32 != dbus_message_iter_get_arg_type(&args))
       fprintf(stderr, "Argument is not integer!\n");
+   dbus_message_iter_get_basic(&args, &width);
+   if (!dbus_message_iter_next(&args))
+      fprintf(stderr, "Message has too few arguments!\n"); 
+   else if (DBUS_TYPE_INT32 != dbus_message_iter_get_arg_type(&args)) 
+      fprintf(stderr, "Argument is not integer!\n"); 
+   else
+      dbus_message_iter_get_basic(&args, &height);
 
-  printf("image size set\n");
 
+   printf("image width set:  %d\n",width);
+   printf("image height set:  %d\n",height);
 
    // create a reply from the message
    reply = dbus_message_new_method_return(msg);
 
    // add the arguments to the reply
    dbus_message_iter_init_append(reply, &args);
-   if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_UINT32, &ok)) {
+   if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &ok)) {
       fprintf(stderr, "Out Of Memory!\n");
       exit(1);
    }
@@ -77,38 +115,123 @@ void image_size_set(DBusMessage* msg,DBusConnection* conn)
 }
 
 
+void image_size_get(DBusMessage* msg,DBusConnection* conn)
+{
+   DBusMessage* reply;
+   DBusMessageIter args;
+   dbus_uint32_t serial = 0;
+
+   // create a reply from the message
+   reply = dbus_message_new_method_return(msg);
+
+   // add the arguments to the reply
+   dbus_message_iter_init_append(reply, &args);
+   if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &width)) {
+      fprintf(stderr, "Out Of Memory!\n");
+      exit(1);
+   }
+   if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &height)) {
+      fprintf(stderr, "Out Of Memory!\n");
+      exit(1);
+   }
+   // send the reply && flush the connection
+   if (!dbus_connection_send(conn, reply, &serial)) {
+      fprintf(stderr, "Out Of Memory!\n");
+      exit(1);
+   }
+   dbus_connection_flush(conn);
+
+   // free the reply
+   dbus_message_unref(reply);
+}
+
+
+
+
+void image_rate_set(DBusMessage* msg,DBusConnection* conn)
+{
+   DBusMessage* reply;
+   DBusMessageIter args;
+   dbus_uint32_t serial = 0;
+   // read the arguments
+   if (!dbus_message_iter_init(msg, &args))
+      fprintf(stderr, "Message has no arguments!\n");
+   else if (DBUS_TYPE_INT32 != dbus_message_iter_get_arg_type(&args))
+      fprintf(stderr, "Argument is not integer!\n");
+   dbus_message_iter_get_basic(&args, &imrate);
+   printf("image rate set:  %d\n",imrate);
+
+   // create a reply from the message
+   reply = dbus_message_new_method_return(msg);
+
+   // add the arguments to the reply
+   dbus_message_iter_init_append(reply, &args);
+   if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &ok)) {
+      fprintf(stderr, "Out Of Memory!\n");
+      exit(1);
+   }
+   // send the reply && flush the connection
+   if (!dbus_connection_send(conn, reply, &serial)) {
+      fprintf(stderr, "Out Of Memory!\n");
+      exit(1);
+   }
+   dbus_connection_flush(conn);
+
+   // free the reply
+   dbus_message_unref(reply);
+
+}
 void image_rate_get(DBusMessage* msg,DBusConnection* conn)
 {
 
    DBusMessage* reply;
    DBusMessageIter args;
    dbus_uint32_t serial = 0;
-   char* param = "";
 
+   reply = dbus_message_new_method_return(msg);
+
+   // add the arguments to the reply
+   dbus_message_iter_init_append(reply, &args);
+   if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &imrate)) {
+      fprintf(stderr, "Out Of Memory!\n");
+      exit(1);
+   }
+   // send the reply && flush the connection
+   if (!dbus_connection_send(conn, reply, &serial)) {
+      fprintf(stderr, "Out Of Memory!\n");
+      exit(1);
+   }
+   dbus_connection_flush(conn);
+
+   // free the reply
+   dbus_message_unref(reply);
+
+}
+
+
+
+void bit_rate_set(DBusMessage* msg,DBusConnection* conn)
+{
+   DBusMessage* reply;
+   DBusMessageIter args;
+   dbus_uint32_t serial = 0;
    // read the arguments
    if (!dbus_message_iter_init(msg, &args))
       fprintf(stderr, "Message has no arguments!\n");
-   else if (DBUS_TYPE_STRING != dbus_message_iter_get_arg_type(&args))
-      fprintf(stderr, "Argument is not string!\n");
-   else
-      dbus_message_iter_get_basic(&args, &param);
-
-   printf("image_rate_get called with %s\n", param);
+   else if (DBUS_TYPE_INT32 != dbus_message_iter_get_arg_type(&args))
+      fprintf(stderr, "Argument is not integer!\n");
+   dbus_message_iter_get_basic(&args, &bitrate);
+   printf("Bit rate set:  %d\n",bitrate);
 
    // create a reply from the message
    reply = dbus_message_new_method_return(msg);
 
    // add the arguments to the reply
    dbus_message_iter_init_append(reply, &args);
-   if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_UINT32, &width)) {
+   if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &ok)) {
       fprintf(stderr, "Out Of Memory!\n");
       exit(1);
    }
-   if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_UINT32, &height)) {
-      fprintf(stderr, "Out Of Memory!\n");
-      exit(1);
-   }
-
    // send the reply && flush the connection
    if (!dbus_connection_send(conn, reply, &serial)) {
       fprintf(stderr, "Out Of Memory!\n");
@@ -119,6 +242,161 @@ void image_rate_get(DBusMessage* msg,DBusConnection* conn)
    // free the reply
    dbus_message_unref(reply);
 }
+
+void bit_rate_get(DBusMessage* msg,DBusConnection* conn)
+{
+
+   DBusMessage* reply;
+   DBusMessageIter args;
+   dbus_uint32_t serial = 0;
+
+   reply = dbus_message_new_method_return(msg);
+
+   // add the arguments to the reply
+   dbus_message_iter_init_append(reply, &args);
+   if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &bitrate)) {
+      fprintf(stderr, "Out Of Memory!\n");
+      exit(1);
+   }
+   // send the reply && flush the connection
+   if (!dbus_connection_send(conn, reply, &serial)) {
+      fprintf(stderr, "Out Of Memory!\n");
+      exit(1);
+   }
+   dbus_connection_flush(conn);
+
+   // free the reply
+   dbus_message_unref(reply);
+
+}
+
+
+void qscale_set(DBusMessage* msg,DBusConnection* conn)
+{
+   DBusMessage* reply;
+   DBusMessageIter args;
+   dbus_uint32_t serial = 0;
+   // read the arguments
+   if (!dbus_message_iter_init(msg, &args))
+      fprintf(stderr, "Message has no arguments!\n");
+   else if (DBUS_TYPE_INT32 != dbus_message_iter_get_arg_type(&args))
+      fprintf(stderr, "Argument is not integer!\n");
+   dbus_message_iter_get_basic(&args, &qscale);
+   printf("qscale rate set:  %d\n",qscale);
+
+   // create a reply from the message
+   reply = dbus_message_new_method_return(msg);
+
+   // add the arguments to the reply
+   dbus_message_iter_init_append(reply, &args);
+   if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &ok)) {
+      fprintf(stderr, "Out Of Memory!\n");
+      exit(1);
+   }
+   // send the reply && flush the connection
+   if (!dbus_connection_send(conn, reply, &serial)) {
+      fprintf(stderr, "Out Of Memory!\n");
+      exit(1);
+   }
+   dbus_connection_flush(conn);
+
+   // free the reply
+   dbus_message_unref(reply);
+
+}
+void qscale_get(DBusMessage* msg,DBusConnection* conn)
+{
+
+   DBusMessage* reply;
+   DBusMessageIter args;
+   dbus_uint32_t serial = 0;
+
+   reply = dbus_message_new_method_return(msg);
+
+   // add the arguments to the reply
+   dbus_message_iter_init_append(reply, &args);
+   if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &qscale)) {
+      fprintf(stderr, "Out Of Memory!\n");
+      exit(1);
+   }
+   // send the reply && flush the connection
+   if (!dbus_connection_send(conn, reply, &serial)) {
+      fprintf(stderr, "Out Of Memory!\n");
+      exit(1);
+   }
+   dbus_connection_flush(conn);
+
+   // free the reply
+   dbus_message_unref(reply);
+
+}
+
+void client_ip_set(DBusMessage* msg,DBusConnection* conn)
+{
+   DBusMessage* reply;
+   DBusMessageIter args;
+   dbus_uint32_t serial = 0;
+
+   // read the arguments
+   if (!dbus_message_iter_init(msg, &args))
+      fprintf(stderr, "Message has no arguments!\n");
+   else if (DBUS_TYPE_STRING != dbus_message_iter_get_arg_type(&args))
+      fprintf(stderr, "Argument is not string!\n");
+   dbus_message_iter_get_basic(&args, &clip);
+
+  printf(clip);
+  printf("\n");
+
+   // create a reply from the message
+   reply = dbus_message_new_method_return(msg);
+
+   // add the arguments to the reply
+   dbus_message_iter_init_append(reply, &args);
+   if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &ok)) {
+      fprintf(stderr, "Out Of Memory!\n");
+      exit(1);
+   }
+   // send the reply && flush the connection
+   if (!dbus_connection_send(conn, reply, &serial)) {
+      fprintf(stderr, "Out Of Memory!\n");
+      exit(1);
+   }
+   dbus_connection_flush(conn);
+
+   // free the reply
+   dbus_message_unref(reply);
+}
+void client_ip_get(DBusMessage* msg,DBusConnection* conn)
+{
+
+   DBusMessage* reply;
+   DBusMessageIter args;
+   dbus_uint32_t serial = 0;
+
+   reply = dbus_message_new_method_return(msg);
+
+   // add the arguments to the reply
+   dbus_message_iter_init_append(reply, &args);
+   if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &clip)) {
+      fprintf(stderr, "Out Of Memory!\n");
+      exit(1);
+   }
+   // send the reply && flush the connection
+   if (!dbus_connection_send(conn, reply, &serial)) {
+      fprintf(stderr, "Out Of Memory!\n");
+      exit(1);
+   }
+   dbus_connection_flush(conn);
+
+   // free the reply
+   dbus_message_unref(reply);
+
+}
+
+
+
+
+
 
 /**
 * Server that exposes a method call and waits for it to be called
@@ -183,17 +461,43 @@ DBUS_NAME_FLAG_REPLACE_EXISTING , &err);
 		  "<node>\n"
 		  "  <interface name=\"ch.cett.misse.ffmpeg\">\n"
 	  	"    <method name=\"image_rate_get\">\n"
-	  	"      <arg name=\"port\" direction=\"out\" type=\"uu\"/>\n"
+	  	"      <arg name=\"port\" direction=\"out\" type=\"i\"/>\n"
 	  	"    </method>\n"
 	  	"    <method name=\"start\">\n"
-	  //	"      <arg name=\"port\" direction=\"out\" type=\"uu\"/>\n"
+	  	"    </method>\n"
+	  	"    <method name=\"image_size_set\">\n"
+                "    <arg name=\"size\"  direction=\"in\" type=\"ii\" /> \n"
+	  	"    <arg name=\"port\" direction=\"out\" type=\"i\"/>\n"
+	  	"    </method>\n"
+	  	"    <method name=\"image_size_get\">\n"
+	  	"    <arg name=\"port\" direction=\"out\" type=\"i\"/>\n"
+	  	"    <arg name=\"port\" direction=\"out\" type=\"i\"/>\n"
 	  	"    </method>\n"
 	  	"    <method name=\"image_rate_set\">\n"
-                "    <arg name=\"width\"  direction=\"in\" type=\"u\" /> \n"
-                "    <arg name=\"height\"  direction=\"in\" type=\"u\" /> \n"
-	  	"    <arg name=\"port\" direction=\"out\" type=\"u\"/>\n"
+                "    <arg name=\"size\"  direction=\"in\" type=\"i\" /> \n"
+	  	"    <arg name=\"port\" direction=\"out\" type=\"i\"/>\n"
 	  	"    </method>\n"
-
+	  	"    <method name=\"bit_rate_set\">\n"
+                "    <arg name=\"size\"  direction=\"in\" type=\"i\" /> \n"
+	  	"    <arg name=\"port\" direction=\"out\" type=\"i\"/>\n"
+	  	"    </method>\n"
+	  	"    <method name=\"bit_rate_get\">\n"
+	  	"      <arg name=\"port\" direction=\"out\" type=\"i\"/>\n"
+	  	"    </method>\n"
+	  	"    <method name=\"qscale_set\">\n"
+                "    <arg name=\"size\"  direction=\"in\" type=\"i\" /> \n"
+	  	"    <arg name=\"port\" direction=\"out\" type=\"i\"/>\n"
+	  	"    </method>\n"
+	  	"    <method name=\"qscale_get\">\n"
+	  	"      <arg name=\"port\" direction=\"out\" type=\"i\"/>\n"
+	  	"    </method>\n"
+	  	"    <method name=\"client_ip_set\">\n"
+                "    <arg name=\"size\"  direction=\"in\" type=\"s\" /> \n"
+	  	"    <arg name=\"port\" direction=\"out\" type=\"i\"/>\n"
+	  	"    </method>\n"
+	  	"    <method name=\"client_ip_get\">\n"
+	  	"      <arg name=\"port\" direction=\"out\" type=\"s\"/>\n"
+	  	"    </method>\n"
 	 	 "  </interface>\n"
 	 	 "</node>\n";
 		reply = dbus_message_new_method_return(msg);
@@ -225,6 +529,38 @@ DBUS_NAME_FLAG_REPLACE_EXISTING , &err);
      if (dbus_message_is_method_call(msg, "ch.cett.misse.ffmpeg", "image_size_set")) 
 	{
 	 image_size_set(msg,conn);
+	}
+     if (dbus_message_is_method_call(msg, "ch.cett.misse.ffmpeg", "image_size_get")) 
+	{
+	 image_size_get(msg,conn);
+	}
+     if (dbus_message_is_method_call(msg, "ch.cett.misse.ffmpeg", "image_rate_set")) 
+	{
+	 image_rate_set(msg,conn);
+	}
+     if (dbus_message_is_method_call(msg, "ch.cett.misse.ffmpeg", "bit_rate_set")) 
+	{
+	 bit_rate_set(msg,conn);
+	}
+     if (dbus_message_is_method_call(msg, "ch.cett.misse.ffmpeg", "bit_rate_get")) 
+	{
+	 bit_rate_get(msg,conn);
+	}
+     if (dbus_message_is_method_call(msg, "ch.cett.misse.ffmpeg", "qscale_set")) 
+	{
+	 qscale_set(msg,conn);
+	}
+     if (dbus_message_is_method_call(msg, "ch.cett.misse.ffmpeg", "qscale_get")) 
+	{
+	 qscale_get(msg,conn);
+	}
+     if (dbus_message_is_method_call(msg, "ch.cett.misse.ffmpeg", "client_ip_set")) 
+	{
+	 client_ip_set(msg,conn);
+	}
+     if (dbus_message_is_method_call(msg, "ch.cett.misse.ffmpeg", "client_ip_get")) 
+	{
+	 client_ip_get(msg,conn);
 	}
 /*
 	else 

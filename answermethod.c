@@ -11,7 +11,7 @@ int level = 21614,width=160,height=128
     ,imrate=25
     ,bitrate=200
     ,qscale=6,ok=0;
-char* clip="127.0.0.1";
+char *clip = NULL;
 
 
 
@@ -342,7 +342,12 @@ void client_ip_set(DBusMessage* msg,DBusConnection* conn)
       fprintf(stderr, "Message has no arguments!\n");
    else if (DBUS_TYPE_STRING != dbus_message_iter_get_arg_type(&args))
       fprintf(stderr, "Argument is not string!\n");
-   dbus_message_iter_get_basic(&args, &clip);
+   char *text;
+   dbus_message_iter_get_basic(&args, &text);
+   if (clip) {
+	   free(clip);
+   }
+   clip = strdup(text);
 
   printf(clip);
   printf("\n");
@@ -579,6 +584,7 @@ DBUS_NAME_FLAG_REPLACE_EXISTING , &err);
 
 int main(int argc, char** argv)
 {
+clip = strdup("127.0.0.1");
 listen();
 return 0;
 }

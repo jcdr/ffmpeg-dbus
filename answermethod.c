@@ -4,29 +4,31 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <memory.h>
+#include <signal.h>
 
 
 
-int level = 21614,width=160,height=128
+int level = 21614,width=640,height=480
     ,imrate=25
     ,bitrate=200
-    ,qscale=6,ok=0;
-char *clip = NULL;
-
-
-
+    ,qscale=6,ok=0,pid;
+char *clip = "127.0.0.1";
 
 void start(DBusMessage* msg,DBusConnection* conn)
 {
+char carac[15];
+char *temp;
 printf("video started \n");
    DBusMessage* reply;
    DBusMessageIter args;
    dbus_uint32_t serial = 0;
+char * parmList[] = 
+   {"/usr/bin/ffmpeg", "-f","video4linux2","-s"}; 
 
-///////////////7
+
+  
 
    /* create the child */
-   int pid;
    if ((pid = fork()) < 0)
      {
        printf("fork failed\n");
@@ -36,10 +38,34 @@ printf("video started \n");
    if (pid == 0)
      {
        /* child */
+          sprintf(carac, "%d", width);
+	   strcat(carac,"x");
+	   temp=strdup(carac);
+	   sprintf(carac, "%d", height);
+	   strcat(temp,carac);
+	   parmList[4]=strdup(temp);
+	   parmList[5]=strdup("-r");
+	   sprintf(carac, "%d", imrate);
+	   parmList[6]=strdup(carac);
+	   parmList[7]=strdup("-b");
+ 	   sprintf(carac, "%d", bitrate);
+ 	   parmList[8]=strdup(carac);
+   	   parmList[9]=strdup("-qscale");
+	   sprintf(carac, "%d", qscale);
+	   parmList[10]=strdup(carac);
+	   parmList[11]=strdup("-i");
+	   parmList[12]=strdup("/dev/video0");
+	   parmList[13]=strdup("-f");
+	   parmList[14]=strdup("mjpeg");
+	   temp=strdup("udp:");
+	   strcat(temp,clip);
+	   strcat(temp,":1234");
+	   parmList[15]=strdup(temp);
+	   parmList[16]=NULL;
+	   execvp("ffmpeg", parmList);
+	   printf("Return not expected. Must be an execvp() error.\\n");
 
-
-       execlp("ls", "ls", (char *) 0);
-       printf("ls failed"); /* if execlp returns, it's an error */
+      
      }
    else
      {
@@ -65,10 +91,36 @@ printf("video started \n");
      }
 
 
-///////////7
 
 }
 
+void stop (DBusMessage* msg,DBusConnection* conn)
+{  
+
+   DBusMessage* reply;
+   DBusMessageIter args;
+   dbus_uint32_t serial = 0;
+   kill(pid, SIGKILL );
+   printf("\n");
+   // create a reply from the message
+   reply = dbus_message_new_method_return(msg);
+
+   // add the arguments to the reply
+   dbus_message_iter_init_append(reply, &args);
+   if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &ok)) {
+      fprintf(stderr, "Out Of Memory!\n");
+      exit(1);
+   }
+   // send the reply && flush the connection
+   if (!dbus_connection_send(conn, reply, &serial)) {
+      fprintf(stderr, "Out Of Memory!\n");
+      exit(1);
+   }
+   dbus_connection_flush(conn);
+
+   // free the reply
+   dbus_message_unref(reply);
+}
 
 
 void image_size_set(DBusMessage* msg,DBusConnection* conn)
@@ -470,6 +522,9 @@ DBUS_NAME_FLAG_REPLACE_EXISTING , &err);
 	  	"    </method>\n"
 	  	"    <method name=\"start\">\n"
 	  	"    </method>\n"
+	  	"    <method name=\"stop\">\n"
+	  	"    <arg name=\"port\" direction=\"out\" type=\"i\"/>\n"
+	  	"    </method>\n"
 	  	"    <method name=\"image_size_set\">\n"
                 "    <arg name=\"size\"  direction=\"in\" type=\"ii\" /> \n"
 	  	"    <arg name=\"port\" direction=\"out\" type=\"i\"/>\n"
@@ -530,6 +585,10 @@ DBUS_NAME_FLAG_REPLACE_EXISTING , &err);
      if (dbus_message_is_method_call(msg, "ch.cett.misse.ffmpeg", "start")) 
 	{
 	 start(msg,conn);
+	}
+     if (dbus_message_is_method_call(msg, "ch.cett.misse.ffmpeg", "stop")) 
+	{
+	 stop(msg,conn);
 	}
      if (dbus_message_is_method_call(msg, "ch.cett.misse.ffmpeg", "image_size_set")) 
 	{

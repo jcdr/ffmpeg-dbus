@@ -12,21 +12,57 @@ int level = 21614,width=640,height=480
     ,imrate=25
     ,bitrate=200
     ,qscale=6,ok=0,pid;
-char *clip = "127.0.0.1";
+char *clip = "127.0.0.1";int status=1;
 
+void send_ok(DBusMessage* msg,DBusConnection* conn)
+{
+   DBusMessage* reply;
+   DBusMessageIter args;
+   dbus_uint32_t serial = 0;
+     reply = dbus_message_new_method_return(msg);
+
+   // add the arguments to the reply
+   dbus_message_iter_init_append(reply, &args);
+   if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &ok)) {
+      fprintf(stderr, "Out Of Memory!\n");
+      exit(1);
+   }
+   // send the reply && flush the connection
+   if (!dbus_connection_send(conn, reply, &serial)) {
+      fprintf(stderr, "Out Of Memory!\n");
+      exit(1);
+   }
+   dbus_connection_flush(conn);
+
+   // free the reply
+   dbus_message_unref(reply);
+
+}
 void start(DBusMessage* msg,DBusConnection* conn)
 {
 char carac[15];
 char *temp;
-printf("video started \n");
+int pfd[2];
+char buffer[BUFSIZ+1];
+
    DBusMessage* reply;
    DBusMessageIter args;
    dbus_uint32_t serial = 0;
 char * parmList[] = 
    {"/usr/bin/ffmpeg", "-f","video4linux2","-s"}; 
-
-
-  
+if (status==0)
+{
+ send_ok(msg,conn);
+ return;
+}
+// create the pipe
+   if (pipe(pfd) == -1)
+     {
+       printf("pipe failed\n");
+       return ;
+     }
+status=0;
+ printf("video started \n");
 
    /* create the child */
    if ((pid = fork()) < 0)
@@ -38,7 +74,11 @@ char * parmList[] =
    if (pid == 0)
      {
        /* child */
-          sprintf(carac, "%d", width);
+           close(pfd[0]); /* close the unused read side */
+           dup2(pfd[1], 2); /* connect the write side with stderr */
+           dup2(pfd[1],1);  /* connect the write side with stdout */
+       	   close(pfd[1]); /* close the write side */
+           sprintf(carac, "%d", width);
 	   strcat(carac,"x");
 	   temp=strdup(carac);
 	   sprintf(carac, "%d", height);
@@ -70,6 +110,7 @@ char * parmList[] =
    else
      {
        /* parent */
+
      reply = dbus_message_new_method_return(msg);
 
    // add the arguments to the reply
@@ -87,6 +128,13 @@ char * parmList[] =
 
    // free the reply
    dbus_message_unref(reply);
+      close(pfd[1]); /* close the unused write side */
+       while (read(pfd[0], buffer, BUFSIZ) != 0)
+      { 
+        printf("%s \n",buffer);
+   
+      }
+       close(pfd[0]); /* close the read side */   
 
      }
 
@@ -96,11 +144,11 @@ char * parmList[] =
 
 void stop (DBusMessage* msg,DBusConnection* conn)
 {  
-
+   status=1;
    DBusMessage* reply;
    DBusMessageIter args;
    dbus_uint32_t serial = 0;
-   kill(pid, SIGKILL );
+   kill(pid,SIGKILL);
    printf("\n");
    // create a reply from the message
    reply = dbus_message_new_method_return(msg);
@@ -521,6 +569,7 @@ DBUS_NAME_FLAG_REPLACE_EXISTING , &err);
 	  	"      <arg name=\"port\" direction=\"out\" type=\"i\"/>\n"
 	  	"    </method>\n"
 	  	"    <method name=\"start\">\n"
+	  	"    <arg name=\"port\" direction=\"out\" type=\"i\"/>\n"
 	  	"    </method>\n"
 	  	"    <method name=\"stop\">\n"
 	  	"    <arg name=\"port\" direction=\"out\" type=\"i\"/>\n"

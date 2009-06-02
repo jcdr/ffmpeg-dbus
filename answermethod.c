@@ -12,14 +12,35 @@ int level = 21614,width=640,height=480
     ,imrate=25
     ,bitrate=200
     ,qscale=6,ok=0,pid;
-char *clip = "127.0.0.1";int status=1;
+char *clip = "127.0.0.1";int *status=1;
+int pfd[2];
+char buffer[BUFSIZ+1];
+void readpipe()
+{
+int i=0;
+if (status==0) 
+{
+   close(pfd[1]); 
+    while (read(pfd[0], buffer, BUFSIZ) != 0)
+      { 
+        i=i+1;
+        printf("%s \n",buffer);
+        if (i==100) return;
+   
+      }
+
+} 
+return;
+}
+
 
 void send_ok(DBusMessage* msg,DBusConnection* conn)
 {
    DBusMessage* reply;
    DBusMessageIter args;
    dbus_uint32_t serial = 0;
-     reply = dbus_message_new_method_return(msg);
+
+   reply = dbus_message_new_method_return(msg);
 
    // add the arguments to the reply
    dbus_message_iter_init_append(reply, &args);
@@ -42,12 +63,9 @@ void start(DBusMessage* msg,DBusConnection* conn)
 {
 char carac[15];
 char *temp;
-int pfd[2];
-char buffer[BUFSIZ+1];
 
-   DBusMessage* reply;
-   DBusMessageIter args;
-   dbus_uint32_t serial = 0;
+DBusMessageIter args;
+
 char * parmList[] = 
    {"/usr/bin/ffmpeg", "-f","video4linux2","-s"}; 
 if (status==0)
@@ -110,31 +128,8 @@ status=0;
    else
      {
        /* parent */
-
-     reply = dbus_message_new_method_return(msg);
-
-   // add the arguments to the reply
-   dbus_message_iter_init_append(reply, &args);
-   if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &ok)) {
-      fprintf(stderr, "Out Of Memory!\n");
-      exit(1);
-   }
-   // send the reply && flush the connection
-   if (!dbus_connection_send(conn, reply, &serial)) {
-      fprintf(stderr, "Out Of Memory!\n");
-      exit(1);
-   }
-   dbus_connection_flush(conn);
-
-   // free the reply
-   dbus_message_unref(reply);
-      close(pfd[1]); /* close the unused write side */
-       while (read(pfd[0], buffer, BUFSIZ) != 0)
-      { 
-        printf("%s \n",buffer);
+    send_ok(msg,conn);
    
-      }
-       close(pfd[0]); /* close the read side */   
 
      }
 
@@ -144,39 +139,19 @@ status=0;
 
 void stop (DBusMessage* msg,DBusConnection* conn)
 {  
-   status=1;
-   DBusMessage* reply;
-   DBusMessageIter args;
-   dbus_uint32_t serial = 0;
    kill(pid,SIGKILL);
+   printf("it's killed \n");
    printf("\n");
    // create a reply from the message
-   reply = dbus_message_new_method_return(msg);
+    send_ok(msg,conn);
+    waitpid(pid,&status,0);
 
-   // add the arguments to the reply
-   dbus_message_iter_init_append(reply, &args);
-   if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &ok)) {
-      fprintf(stderr, "Out Of Memory!\n");
-      exit(1);
-   }
-   // send the reply && flush the connection
-   if (!dbus_connection_send(conn, reply, &serial)) {
-      fprintf(stderr, "Out Of Memory!\n");
-      exit(1);
-   }
-   dbus_connection_flush(conn);
-
-   // free the reply
-   dbus_message_unref(reply);
 }
 
 
 void image_size_set(DBusMessage* msg,DBusConnection* conn)
 {  
-
-   DBusMessage* reply;
    DBusMessageIter args;
-   dbus_uint32_t serial = 0;
    // read the arguments
    if (!dbus_message_iter_init(msg, &args))
       fprintf(stderr, "Message has no arguments!\n");
@@ -193,25 +168,7 @@ void image_size_set(DBusMessage* msg,DBusConnection* conn)
 
    printf("image width set:  %d\n",width);
    printf("image height set:  %d\n",height);
-
-   // create a reply from the message
-   reply = dbus_message_new_method_return(msg);
-
-   // add the arguments to the reply
-   dbus_message_iter_init_append(reply, &args);
-   if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &ok)) {
-      fprintf(stderr, "Out Of Memory!\n");
-      exit(1);
-   }
-   // send the reply && flush the connection
-   if (!dbus_connection_send(conn, reply, &serial)) {
-      fprintf(stderr, "Out Of Memory!\n");
-      exit(1);
-   }
-   dbus_connection_flush(conn);
-
-   // free the reply
-   dbus_message_unref(reply);
+   send_ok(msg,conn);
 }
 
 
@@ -250,9 +207,7 @@ void image_size_get(DBusMessage* msg,DBusConnection* conn)
 
 void image_rate_set(DBusMessage* msg,DBusConnection* conn)
 {
-   DBusMessage* reply;
    DBusMessageIter args;
-   dbus_uint32_t serial = 0;
    // read the arguments
    if (!dbus_message_iter_init(msg, &args))
       fprintf(stderr, "Message has no arguments!\n");
@@ -260,25 +215,7 @@ void image_rate_set(DBusMessage* msg,DBusConnection* conn)
       fprintf(stderr, "Argument is not integer!\n");
    dbus_message_iter_get_basic(&args, &imrate);
    printf("image rate set:  %d\n",imrate);
-
-   // create a reply from the message
-   reply = dbus_message_new_method_return(msg);
-
-   // add the arguments to the reply
-   dbus_message_iter_init_append(reply, &args);
-   if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &ok)) {
-      fprintf(stderr, "Out Of Memory!\n");
-      exit(1);
-   }
-   // send the reply && flush the connection
-   if (!dbus_connection_send(conn, reply, &serial)) {
-      fprintf(stderr, "Out Of Memory!\n");
-      exit(1);
-   }
-   dbus_connection_flush(conn);
-
-   // free the reply
-   dbus_message_unref(reply);
+    send_ok(msg,conn);
 
 }
 void image_rate_get(DBusMessage* msg,DBusConnection* conn)
@@ -312,9 +249,7 @@ void image_rate_get(DBusMessage* msg,DBusConnection* conn)
 
 void bit_rate_set(DBusMessage* msg,DBusConnection* conn)
 {
-   DBusMessage* reply;
    DBusMessageIter args;
-   dbus_uint32_t serial = 0;
    // read the arguments
    if (!dbus_message_iter_init(msg, &args))
       fprintf(stderr, "Message has no arguments!\n");
@@ -322,25 +257,7 @@ void bit_rate_set(DBusMessage* msg,DBusConnection* conn)
       fprintf(stderr, "Argument is not integer!\n");
    dbus_message_iter_get_basic(&args, &bitrate);
    printf("Bit rate set:  %d\n",bitrate);
-
-   // create a reply from the message
-   reply = dbus_message_new_method_return(msg);
-
-   // add the arguments to the reply
-   dbus_message_iter_init_append(reply, &args);
-   if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &ok)) {
-      fprintf(stderr, "Out Of Memory!\n");
-      exit(1);
-   }
-   // send the reply && flush the connection
-   if (!dbus_connection_send(conn, reply, &serial)) {
-      fprintf(stderr, "Out Of Memory!\n");
-      exit(1);
-   }
-   dbus_connection_flush(conn);
-
-   // free the reply
-   dbus_message_unref(reply);
+    send_ok(msg,conn);
 }
 
 void bit_rate_get(DBusMessage* msg,DBusConnection* conn)
@@ -373,9 +290,7 @@ void bit_rate_get(DBusMessage* msg,DBusConnection* conn)
 
 void qscale_set(DBusMessage* msg,DBusConnection* conn)
 {
-   DBusMessage* reply;
    DBusMessageIter args;
-   dbus_uint32_t serial = 0;
    // read the arguments
    if (!dbus_message_iter_init(msg, &args))
       fprintf(stderr, "Message has no arguments!\n");
@@ -383,25 +298,7 @@ void qscale_set(DBusMessage* msg,DBusConnection* conn)
       fprintf(stderr, "Argument is not integer!\n");
    dbus_message_iter_get_basic(&args, &qscale);
    printf("qscale rate set:  %d\n",qscale);
-
-   // create a reply from the message
-   reply = dbus_message_new_method_return(msg);
-
-   // add the arguments to the reply
-   dbus_message_iter_init_append(reply, &args);
-   if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &ok)) {
-      fprintf(stderr, "Out Of Memory!\n");
-      exit(1);
-   }
-   // send the reply && flush the connection
-   if (!dbus_connection_send(conn, reply, &serial)) {
-      fprintf(stderr, "Out Of Memory!\n");
-      exit(1);
-   }
-   dbus_connection_flush(conn);
-
-   // free the reply
-   dbus_message_unref(reply);
+    send_ok(msg,conn);
 
 }
 void qscale_get(DBusMessage* msg,DBusConnection* conn)
@@ -433,9 +330,7 @@ void qscale_get(DBusMessage* msg,DBusConnection* conn)
 
 void client_ip_set(DBusMessage* msg,DBusConnection* conn)
 {
-   DBusMessage* reply;
    DBusMessageIter args;
-   dbus_uint32_t serial = 0;
 
    // read the arguments
    if (!dbus_message_iter_init(msg, &args))
@@ -451,25 +346,7 @@ void client_ip_set(DBusMessage* msg,DBusConnection* conn)
 
   printf(clip);
   printf("\n");
-
-   // create a reply from the message
-   reply = dbus_message_new_method_return(msg);
-
-   // add the arguments to the reply
-   dbus_message_iter_init_append(reply, &args);
-   if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &ok)) {
-      fprintf(stderr, "Out Of Memory!\n");
-      exit(1);
-   }
-   // send the reply && flush the connection
-   if (!dbus_connection_send(conn, reply, &serial)) {
-      fprintf(stderr, "Out Of Memory!\n");
-      exit(1);
-   }
-   dbus_connection_flush(conn);
-
-   // free the reply
-   dbus_message_unref(reply);
+    send_ok(msg,conn);
 }
 void client_ip_get(DBusMessage* msg,DBusConnection* conn)
 {
@@ -498,65 +375,10 @@ void client_ip_get(DBusMessage* msg,DBusConnection* conn)
 
 }
 
-
-
-
-
-
-/**
-* Server that exposes a method call and waits for it to be called
-*/
-void listen()
+void do_introspect(DBusMessage* msg,DBusConnection* conn)
 {
-   DBusMessage* msg;
    DBusMessage* reply;
-   DBusConnection* conn;
-   DBusError err;
-   int ret;
    dbus_uint32_t serial = 0;
-   printf("Listening for method calls\n");
-
-   // initialise the error
-   dbus_error_init(&err);
-
-   // connect to the bus and check for errors
-   conn = dbus_bus_get(DBUS_BUS_SESSION, &err);
-   if (dbus_error_is_set(&err)) {
-      fprintf(stderr, "Connection Error (%s)\n", err.message);
-      dbus_error_free(&err);
-   }
-   if (NULL == conn) {
-      fprintf(stderr, "Connection Null\n");
-      exit(1);
-   }
-
-   // request our name on the bus and check for errors
-   ret = dbus_bus_request_name(conn, "ch.cett.misse.ffmpeg",
-DBUS_NAME_FLAG_REPLACE_EXISTING , &err);
-   if (dbus_error_is_set(&err)) {
-      fprintf(stderr, "Name Error (%s)\n", err.message);
-      dbus_error_free(&err);
-   }
-   if (DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER != ret) {
-      fprintf(stderr, "Not Primary Owner (%d)\n", ret);
-      exit(1);
-   }
-
-   // loop, testing for new messages
-   while (true)
-   {
-      // non blocking read of the next available message
-      dbus_connection_read_write(conn, 0);
-      msg = dbus_connection_pop_message(conn);
-
-      // loop again if we haven't got a message
-      if (NULL == msg) {
-         sleep(1);
-         continue;
-      }
-
-      // check this is a method call for the right interface & method
-
       if (dbus_message_is_method_call(msg, "org.freedesktop.DBus.Introspectable", "Introspect")) 
 	{
 		printf("must do introspection \n");
@@ -634,6 +456,7 @@ DBUS_NAME_FLAG_REPLACE_EXISTING , &err);
      if (dbus_message_is_method_call(msg, "ch.cett.misse.ffmpeg", "start")) 
 	{
 	 start(msg,conn);
+         readpipe();
 	}
      if (dbus_message_is_method_call(msg, "ch.cett.misse.ffmpeg", "stop")) 
 	{
@@ -683,6 +506,64 @@ DBUS_NAME_FLAG_REPLACE_EXISTING , &err);
 */
       // free the message
       dbus_message_unref(msg);
+}
+
+
+
+
+/**
+* Server that exposes a method call and waits for it to be called
+*/
+void listen()
+{
+   DBusMessage* msg;
+   DBusConnection* conn;
+   DBusError err;
+   int ret;
+   printf("Listening for method calls\n");
+
+   // initialise the error
+   dbus_error_init(&err);
+
+   // connect to the bus and check for errors
+   conn = dbus_bus_get(DBUS_BUS_SESSION, &err);
+   if (dbus_error_is_set(&err)) {
+      fprintf(stderr, "Connection Error (%s)\n", err.message);
+      dbus_error_free(&err);
+   }
+   if (NULL == conn) {
+      fprintf(stderr, "Connection Null\n");
+      exit(1);
+   }
+
+   // request our name on the bus and check for errors
+   ret = dbus_bus_request_name(conn, "ch.cett.misse.ffmpeg",
+   DBUS_NAME_FLAG_REPLACE_EXISTING , &err);
+   if (dbus_error_is_set(&err)) {
+      fprintf(stderr, "Name Error (%s)\n", err.message);
+      dbus_error_free(&err);
+   }
+   if (DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER != ret) {
+      fprintf(stderr, "Not Primary Owner (%d)\n", ret);
+      exit(1);
+   }
+
+   // loop, testing for new messages
+   while (true)
+   {
+      // non blocking read of the next available message
+      dbus_connection_read_write(conn, 0);
+      msg = dbus_connection_pop_message(conn);
+
+      // loop again if we haven't got a message
+      if (NULL == msg) {
+         sleep(1);
+         continue;
+      }
+
+      // check this is a method call for the right interface & method
+
+      do_introspect(msg,conn);
    }
 
 }
@@ -694,6 +575,7 @@ int main(int argc, char** argv)
 {
 clip = strdup("127.0.0.1");
 listen();
+
 return 0;
 }
 

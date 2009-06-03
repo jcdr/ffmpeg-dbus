@@ -13,19 +13,30 @@ int level = 21614,width=640,height=480
     ,bitrate=200
     ,qscale=6,ok=0,pid;
 char *clip = "127.0.0.1";int *status=1;
-int pfd[2];
-char buffer[BUFSIZ+1];
-void readpipe()
+int pfderr[2],pfdout[2];
+char bufferr[BUFSIZ+1],buffout[BUFSIZ+1];
+void readpipe(DBusMessage* msg,DBusConnection* conn)
 {
 int i=0;
 if (status==0) 
 {
-   close(pfd[1]); 
-    while (read(pfd[0], buffer, BUFSIZ) != 0)
-      { 
+   close(pfderr[1]); 
+    while (((read(pfderr[0], bufferr, BUFSIZ) != 0)||(read(pfdout[0], buffout, BUFSIZ) != 0))&&(status==0))
+      {
+      dbus_connection_read_write(conn, 0);
+      msg = dbus_connection_pop_message(conn);
+
+      // loop again if we haven't got a message
+      if (NULL != msg) 
+        { 
+                do_introspect(msg,conn);  
+        	return;
+       }
+        
         i=i+1;
-        printf("%s \n",buffer);
-        if (i==100) return;
+       if (bufferr!=NULL) 
+        printf("%s \n",bufferr);
+       else printf("%s \n",buffout);
    
       }
 
@@ -74,7 +85,7 @@ if (status==0)
  return;
 }
 // create the pipe
-   if (pipe(pfd) == -1)
+   if ((pipe(pfderr) == -1)||(pipe(pfdout) == -1))
      {
        printf("pipe failed\n");
        return ;
@@ -92,10 +103,12 @@ status=0;
    if (pid == 0)
      {
        /* child */
-           close(pfd[0]); /* close the unused read side */
-           dup2(pfd[1], 2); /* connect the write side with stderr */
-           dup2(pfd[1],1);  /* connect the write side with stdout */
-       	   close(pfd[1]); /* close the write side */
+           close(pfderr[0]); /* close the unused read side */
+           close(pfdout[0]);
+           dup2(pfderr[1], 2); /* connect the write side with stderr */
+           dup2(pfdout[1],1);  /* connect the write side with stdout */
+       	   close(pfderr[1]); /* close the write side */
+       	   close(pfdout[1]);
            sprintf(carac, "%d", width);
 	   strcat(carac,"x");
 	   temp=strdup(carac);
@@ -456,7 +469,7 @@ void do_introspect(DBusMessage* msg,DBusConnection* conn)
      if (dbus_message_is_method_call(msg, "ch.cett.misse.ffmpeg", "start")) 
 	{
 	 start(msg,conn);
-         readpipe();
+         readpipe(msg,conn);
 	}
      if (dbus_message_is_method_call(msg, "ch.cett.misse.ffmpeg", "stop")) 
 	{

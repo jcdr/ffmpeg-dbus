@@ -17,8 +17,13 @@ print '10- qscale_get \n'
 print '11- client_ip_set \n'
 print '12- client_ip_get \n'
 
-while True:
- x = int(raw_input("enter the number of the command: "))
+while True: 
+ try:
+	x = int(raw_input("enter the number of the command: "))
+ except ValueError:
+	 print "You didn't enter a number!"
+        
+
  if x < 1:
       exit()
  elif x == 1:
@@ -51,6 +56,8 @@ while True:
       print ffmpeg.client_ip_set(s)
  elif x == 12:
       print ffmpeg.client_ip_get()
+ elif x ==13:
+      print ffmpeg.goto()
 
  else:
       print 'invalid'

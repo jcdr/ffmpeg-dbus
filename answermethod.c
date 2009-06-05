@@ -5,8 +5,8 @@
 #include <stdlib.h>
 #include <memory.h>
 #include <signal.h>
+#include <sys/wait.h>
 #include "debug.h"
-
 
 int debug_level = 1;
 int debug_syslog = 0;
@@ -16,9 +16,10 @@ int level = 21614, width = 640, height = 480, imrate = 25, bitrate =
     200, qscale = 6, ok = 0, pid;
 char *clip = "127.0.0.1";
 int status = 1;
-
+int pfderr[2], pfdout[2];
+char bufferr[BUFSIZ + 1], buffout[BUFSIZ + 1];
 void send_ok(DBusMessage * msg, DBusConnection * conn)
-{ 
+{
 	DBusMessage *reply;
 	DBusMessageIter args;
 	dbus_uint32_t serial = 0;
@@ -58,8 +59,15 @@ void start(DBusMessage * msg, DBusConnection * conn)
 		send_ok(msg, conn);
 		return;
 	}
+// create the pipe
+	if ((pipe(pfderr) == -1) || (pipe(pfdout) == -1)) 
+	{
+		printf("pipe failed\n");
+		return;
+	}
 	status = 0;
 	printf("video started \n");
+	args = args;
 
 	/* create the child */
 	if ((pid = fork()) < 0) 
@@ -71,6 +79,12 @@ void start(DBusMessage * msg, DBusConnection * conn)
 	if (pid == 0) 
 	{
 		/* child */
+		close(pfderr[0]);	/* close the unused read side */
+		close(pfdout[0]);
+		dup2(pfderr[1], 2);	/* connect the write side with stderr */
+		//      dup2(pfdout[1], 1);     /* connect the write side with stdout */
+		close(pfderr[1]);	/* close the write side */
+		close(pfdout[1]);
 		sprintf(carac, "%d", width);
 		strcat(carac, "x");
 		temp = strdup(carac);
@@ -116,7 +130,7 @@ void stop(DBusMessage * msg, DBusConnection * conn)
 	printf("\n");
 	// create a reply from the message
 	send_ok(msg, conn);
-	status=1;
+	status = 1;
 
 }
 
@@ -427,6 +441,7 @@ void do_introspect(DBusMessage * msg, DBusConnection * conn)
 		dbus_message_unref(reply);
 	}
 }
+
 void test_message(DBusMessage * msg, DBusConnection * conn)
 {
 	if (dbus_message_is_method_call
@@ -487,19 +502,11 @@ void test_message(DBusMessage * msg, DBusConnection * conn)
 	{
 		client_ip_get(msg, conn);
 	}
-/*
-	else 
-	 {
-	      fprintf(stderr, "Unknown message: member=%s\n", dbus_message_get_member(msg));
-         }
-*/
-	// free the message
-return;
+
+	return;
 }
 
-/**
-* Server that exposes a method call and waits for it to be called
-*/
+
 void listen()
 {
 	DBusMessage *msg;
@@ -544,7 +551,32 @@ void listen()
 		dbus_connection_read_write(conn, 0);
 		msg = dbus_connection_pop_message(conn);
 
+		if (status == 0) 
+		{
+			close(pfderr[1]);
+			close(pfdout[1]);
+			while (((read(pfderr[0], bufferr, BUFSIZ) != 0)
+				|| (read(pfdout[0], buffout, BUFSIZ) != 0))
+			       && (status == 0)) 
+			{
+				//printf("status est %d \n", status);
+				dbus_connection_read_write(conn, 0);
+				msg = dbus_connection_pop_message(conn);
 
+				// loop again if we haven't got a message
+				if (NULL != msg) 
+				{
+					do_introspect(msg, conn);
+					test_message(msg, conn);
+				}
+
+				if (bufferr != NULL)
+					printf("%s \n", bufferr);
+				else
+					printf("%s \n", buffout);
+
+			}
+		}
 		// loop again if we haven't got a message
 		if (NULL == msg) 
 		{
@@ -554,8 +586,8 @@ void listen()
 		// check this is a method call for the right interface & method
 
 		do_introspect(msg, conn);
-		test_message(msg,conn);
-                dbus_message_unref(msg);
+		test_message(msg, conn);
+		dbus_message_unref(msg);
 	}
 
 }

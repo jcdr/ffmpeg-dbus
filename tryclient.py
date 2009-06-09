@@ -22,6 +22,7 @@ while True:
 	x = int(raw_input("enter the number of the command: "))
  except ValueError:
 	 print "You didn't enter a number!"
+         continue
         
 
  if x < 1:
@@ -31,24 +32,44 @@ while True:
  elif x == 2:
       ffmpeg.stop()
  elif x == 3:
+  try:
       w = int(raw_input("the width of the frame is: "))
+  except ValueError:
+	 print "You didn't enter a number!"
+	 continue
+  try:
       h = int(raw_input("the height of the frame is: "))
-      print ffmpeg.image_size_set(w, h)
+  except ValueError:
+	 print "You didn't enter a number!"
+         continue
+  print ffmpeg.image_size_set(w, h)
  elif x == 4:
       print ffmpeg.image_size_get()
  elif x == 5:
+  try:
       r= int(raw_input("the image rate is: "))
-      print ffmpeg.image_rate_set(r)
+  except ValueError:
+	 print "You didn't enter a number!"
+         continue
+  print ffmpeg.image_rate_set(r)
  elif x == 6:
       print ffmpeg.image_rate_get()
  elif x == 7:
+  try:
       r = int(raw_input("the bit rate is: "))
-      print ffmpeg.bit_rate_set (r)
+  except ValueError:
+	 print "You didn't enter a number!"
+         continue
+  print ffmpeg.bit_rate_set (r)
  elif x == 8:
       print ffmpeg.bit_rate_get()
  elif x == 9:
+  try:
       r = int(raw_input("the qscale is: "))
-      print ffmpeg.qscale_set (r)
+  except ValueError:
+	 print "You didn't enter a number!"
+         continue
+  print ffmpeg.qscale_set (r)
  elif x == 10:
       print ffmpeg.qscale_get()
  elif x == 11:
@@ -56,8 +77,6 @@ while True:
       print ffmpeg.client_ip_set(s)
  elif x == 12:
       print ffmpeg.client_ip_get()
- elif x ==13:
-      print ffmpeg.goto()
 
  else:
       print 'invalid'

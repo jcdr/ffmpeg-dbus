@@ -11,7 +11,7 @@ int debug_level = 1;
 int debug_syslog = 0;
 int debug_console = 1;
 
-int  width = 640, height = 480, imrate = 25, bitrate =
+int width = 640, height = 480, imrate = 25, bitrate =
     200, qscale = 6, ok = 0, pid;
 char *clip = "127.0.0.1";
 int status = 1;
@@ -19,7 +19,6 @@ int pfderr[2], pfdout[2];
 char bufferr[BUFSIZ + 1], buffout[BUFSIZ + 1];
 void send_ok(DBusMessage * msg, DBusConnection * conn)
 {
-	debug(2, "size: %dx%d imrate: %d bitrate: %d qscale: %d IP: %s", width,height,imrate,bitrate,qscale,clip);
 	DBusMessage *reply;
 	DBusMessageIter args;
 	dbus_uint32_t serial = 0;
@@ -43,23 +42,33 @@ void send_ok(DBusMessage * msg, DBusConnection * conn)
 	dbus_message_unref(reply);
 
 }
-char *concatenate(char *a,char *carac)
+
+char *concatenate(char *a, char *carac)
 {
- char *c;
-  c = malloc(strlen(a) + strlen(carac) + 1);
-      
-         strcpy(c, a);
-         strcat(c, carac);
-         return c;
+	char *c;
+	int size_c = strlen(a) + strlen(carac) + 1;
+	c = malloc(size_c);
+	if (c == NULL) {
+		panic("%s", "Error with malloc!\n");
+		kill(pid, SIGKILL);
+	}
+	memset(c, 0, size_c);
+	strcpy(c, a);
+	strcat(c, carac);
+	return c;
 }
 
 void start(DBusMessage * msg, DBusConnection * conn)
 {
-        debug(2, "size: %dx%d imrate: %d bitrate: %d qscale: %d IP: %s", width,height,imrate,bitrate,qscale,clip);
+	debug(2, "size: %dx%d imrate: %d bitrate: %d qscale: %d IP: %s", width,
+	      height, imrate, bitrate, qscale, clip);
 	char carac[15];
 	char *temp;
 
-	char *parmList[] = { "/usr/bin/ffmpeg", "-f", "video4linux2", "-s","","-r","","-b","","-qscale","","-i","/dev/video0","-f","mjpeg","",NULL };
+	char *parmList[] =
+	    { "/usr/bin/ffmpeg", "-f", "video4linux2", "-s", "", "-r", "", "-b",
+		"", "-qscale", "", "-i", "/dev/video0", "-f", "mjpeg", "", NULL
+	};
 	if (status == 0) {
 		debug(1, "%s", "already started \n");
 		send_ok(msg, conn);
@@ -87,18 +96,18 @@ void start(DBusMessage * msg, DBusConnection * conn)
 		dup2(pfdout[1], 1);	/* connect the write side with stdout */
 		close(pfderr[1]);	/* close the write side */
 		close(pfdout[1]);
-		sprintf(carac, "%d", width);
-		temp = concatenate(carac,"x");
-		sprintf(carac, "%d", height);
-		parmList[4] = concatenate(temp,carac);
-		sprintf(carac, "%d", imrate);
+		snprintf(carac, 15, "%d", width);
+		temp = concatenate(carac, "x");
+		snprintf(carac, 15, "%d", height);
+		parmList[4] = concatenate(temp, carac);
+		snprintf(carac, 15, "%d", imrate);
 		parmList[6] = carac;
-		sprintf(carac, "%d", bitrate);
+		snprintf(carac, 15, "%d", bitrate);
 		parmList[8] = carac;
-		sprintf(carac, "%d", qscale);
-		parmList[10] =carac;
-		temp = concatenate("udp:",clip);
-		parmList[15] = concatenate(temp,":1234");
+		snprintf(carac, 15, "%d", qscale);
+		parmList[10] = carac;
+		temp = concatenate("udp:", clip);
+		parmList[15] = concatenate(temp, ":1234");
 		execvp("ffmpeg", parmList);
 		panic("%s",
 		      "Return not expected. Must be an execvp() error.\\n");
@@ -115,7 +124,6 @@ void start(DBusMessage * msg, DBusConnection * conn)
 
 void stop(DBusMessage * msg, DBusConnection * conn)
 {
-	debug(2, "size: %dx%d imrate: %d bitrate: %d qscale: %d IP: %s", width,height,imrate,bitrate,qscale,clip);
 	if (status == 0) {
 		kill(pid, SIGKILL);
 		debug(1, "%s", "it's killed \n");
@@ -128,7 +136,7 @@ void stop(DBusMessage * msg, DBusConnection * conn)
 
 void image_size_set(DBusMessage * msg, DBusConnection * conn)
 {
-	debug(2, "size: %dx%d imrate: %d bitrate: %d qscale: %d IP: %s", width,height,imrate,bitrate,qscale,clip);
+	debug(2, "size: %dx%d ", width, height);
 	DBusMessageIter args;
 	// read the arguments
 	if (!dbus_message_iter_init(msg, &args)) {
@@ -150,7 +158,7 @@ void image_size_set(DBusMessage * msg, DBusConnection * conn)
 
 void image_size_get(DBusMessage * msg, DBusConnection * conn)
 {
-	debug(2, "size: %dx%d imrate: %d bitrate: %d qscale: %d IP: %s", width,height,imrate,bitrate,qscale,clip);
+	debug(2, "size: %dx%d ", width, height);
 	DBusMessage *reply;
 	DBusMessageIter args;
 	dbus_uint32_t serial = 0;
@@ -181,7 +189,7 @@ void image_size_get(DBusMessage * msg, DBusConnection * conn)
 
 void image_rate_set(DBusMessage * msg, DBusConnection * conn)
 {
-	debug(2, "size: %dx%d imrate: %d bitrate: %d qscale: %d IP: %s", width,height,imrate,bitrate,qscale,clip);
+	debug(2, "imrate: %d ", imrate);
 	DBusMessageIter args;
 	// read the arguments
 	if (!dbus_message_iter_init(msg, &args)) {
@@ -196,7 +204,7 @@ void image_rate_set(DBusMessage * msg, DBusConnection * conn)
 
 void image_rate_get(DBusMessage * msg, DBusConnection * conn)
 {
-	debug(2, "size: %dx%d imrate: %d bitrate: %d qscale: %d IP: %s", width,height,imrate,bitrate,qscale,clip);
+	debug(2, "imrate: %d ", imrate);
 	DBusMessage *reply;
 	DBusMessageIter args;
 	dbus_uint32_t serial = 0;
@@ -223,7 +231,7 @@ void image_rate_get(DBusMessage * msg, DBusConnection * conn)
 
 void bit_rate_set(DBusMessage * msg, DBusConnection * conn)
 {
-	debug(2, "size: %dx%d imrate: %d bitrate: %d qscale: %d IP: %s", width,height,imrate,bitrate,qscale,clip);
+	debug(2, "bitrate: %d ", bitrate);
 	DBusMessageIter args;
 	// read the arguments
 	if (!dbus_message_iter_init(msg, &args)) {
@@ -238,7 +246,7 @@ void bit_rate_set(DBusMessage * msg, DBusConnection * conn)
 
 void bit_rate_get(DBusMessage * msg, DBusConnection * conn)
 {
-	debug(2, "size: %dx%d imrate: %d bitrate: %d qscale: %d IP: %s", width,height,imrate,bitrate,qscale,clip);
+	debug(2, "bitrate: %d ", bitrate);
 	DBusMessage *reply;
 	DBusMessageIter args;
 	dbus_uint32_t serial = 0;
@@ -265,7 +273,7 @@ void bit_rate_get(DBusMessage * msg, DBusConnection * conn)
 
 void qscale_set(DBusMessage * msg, DBusConnection * conn)
 {
-	debug(2, "size: %dx%d imrate: %d bitrate: %d qscale: %d IP: %s", width,height,imrate,bitrate,qscale,clip);
+	debug(2, "qscale: %d ", qscale);
 	DBusMessageIter args;
 	// read the arguments
 	if (!dbus_message_iter_init(msg, &args)) {
@@ -280,7 +288,7 @@ void qscale_set(DBusMessage * msg, DBusConnection * conn)
 
 void qscale_get(DBusMessage * msg, DBusConnection * conn)
 {
-	debug(2, "size: %dx%d imrate: %d bitrate: %d qscale: %d IP: %s", width,height,imrate,bitrate,qscale,clip);
+	debug(2, "qscale: %d ", qscale);
 	DBusMessage *reply;
 	DBusMessageIter args;
 	dbus_uint32_t serial = 0;
@@ -307,7 +315,7 @@ void qscale_get(DBusMessage * msg, DBusConnection * conn)
 
 void client_ip_set(DBusMessage * msg, DBusConnection * conn)
 {
-	debug(2, "size: %dx%d imrate: %d bitrate: %d qscale: %d IP: %s", width,height,imrate,bitrate,qscale,clip);
+	debug(2, "IP: %s", clip);
 	DBusMessageIter args;
 
 	// read the arguments
@@ -328,7 +336,7 @@ void client_ip_set(DBusMessage * msg, DBusConnection * conn)
 
 void client_ip_get(DBusMessage * msg, DBusConnection * conn)
 {
-	debug(2, "size: %dx%d imrate: %d bitrate: %d qscale: %d IP: %s", width,height,imrate,bitrate,qscale,clip);
+	debug(2, "IP: %s", clip);
 	DBusMessage *reply;
 	DBusMessageIter args;
 	dbus_uint32_t serial = 0;
@@ -355,7 +363,6 @@ void client_ip_get(DBusMessage * msg, DBusConnection * conn)
 
 void do_introspect(DBusMessage * msg, DBusConnection * conn)
 {
-	debug(2, "size: %dx%d imrate: %d bitrate: %d qscale: %d IP: %s", width,height,imrate,bitrate,qscale,clip);
 	DBusMessage *reply;
 	dbus_uint32_t serial = 0;
 	if (dbus_message_is_method_call
@@ -428,7 +435,6 @@ void do_introspect(DBusMessage * msg, DBusConnection * conn)
 
 void test_message(DBusMessage * msg, DBusConnection * conn)
 {
-	debug(2, "size: %dx%d imrate: %d bitrate: %d qscale: %d IP: %s", width,height,imrate,bitrate,qscale,clip);
 	if (dbus_message_is_method_call
 	    (msg, "ch.cett.misse.ffmpeg", "image_rate_get")) {
 		image_rate_get(msg, conn);
@@ -485,7 +491,8 @@ void listen()
 	DBusConnection *conn;
 	DBusError err;
 	int ret;
-	debug(2, "size: %dx%d imrate: %d bitrate: %d qscale: %d IP: %s", width,height,imrate,bitrate,qscale,clip);
+	debug(2, "size: %dx%d imrate: %d bitrate: %d qscale: %d IP: %s", width,
+	      height, imrate, bitrate, qscale, clip);
 	debug(1, "%s", "Listening for method calls\n");
 
 	// initialise the error
@@ -550,7 +557,8 @@ void listen()
 
 int main(int argc, char **argv)
 {
-	debug(2, "size: %dx%d imrate: %d bitrate: %d qscale: %d IP: %s", width,height,imrate,bitrate,qscale,clip);
+	debug(2, "size: %dx%d imrate: %d bitrate: %d qscale: %d IP: %s", width,
+	      height, imrate, bitrate, qscale, clip);
 	clip = strdup("127.0.0.1");
 	listen();
 

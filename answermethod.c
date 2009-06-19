@@ -85,7 +85,7 @@ void start(DBusMessage * msg, DBusConnection * conn)
 		close(pfdout[1]);
 		if (snprintf(size, sizeof(size), "%dx%d", width, height)
 		     >= sizeof(size)) {
-			 panic("error: unable to snprintf(): size=%d", sizeof(size));
+			 panic("error: unable to snprintf(): size=%zu", sizeof(size));
 			 exit(EXIT_FAILURE);
 		}
 		parmList[4] = size;
@@ -97,7 +97,7 @@ void start(DBusMessage * msg, DBusConnection * conn)
 		parmList[10] = carac;
 		if(snprintf(sclip,sizeof(sclip),"udp:%s:1234",clip)
 		     >= sizeof(sclip)) {
-			 panic("error: unable to snprintf(): size=%d", sizeof(sclip));
+			 panic("error: unable to snprintf(): size=%zu", sizeof(sclip));
 			 exit(EXIT_FAILURE);
 		}
 		parmList[15]=sclip;

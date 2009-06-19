@@ -43,28 +43,15 @@ void send_ok(DBusMessage * msg, DBusConnection * conn)
 
 }
 
-char *concatenate(char *a, char *carac)
-{
-	char *c;
-	int size_c = strlen(a) + strlen(carac) + 1;
-	c = malloc(size_c);
-	if (c == NULL) {
-		panic("%s", "Error with malloc!\n");
-		kill(pid, SIGKILL);
-	}
-	memset(c, 0, size_c);
-	strcpy(c, a);
-	strcat(c, carac);
-	return c;
-}
 
 void start(DBusMessage * msg, DBusConnection * conn)
 {
 	debug(2, "size: %dx%d imrate: %d bitrate: %d qscale: %d IP: %s", width,
 	      height, imrate, bitrate, qscale, clip);
-	char carac[15];
-	char *temp;
-
+	char carac[16];
+	int size_carac=sizeof(carac);
+	char size[16];
+	char sclip[25];
 	char *parmList[] =
 	    { "/usr/bin/ffmpeg", "-f", "video4linux2", "-s", "", "-r", "", "-b",
 		"", "-qscale", "", "-i", "/dev/video0", "-f", "mjpeg", "", NULL
@@ -96,18 +83,24 @@ void start(DBusMessage * msg, DBusConnection * conn)
 		dup2(pfdout[1], 1);	/* connect the write side with stdout */
 		close(pfderr[1]);	/* close the write side */
 		close(pfdout[1]);
-		snprintf(carac, 15, "%d", width);
-		temp = concatenate(carac, "x");
-		snprintf(carac, 15, "%d", height);
-		parmList[4] = concatenate(temp, carac);
-		snprintf(carac, 15, "%d", imrate);
+		if (snprintf(size, sizeof(size), "%dx%d", width, height)
+		     >= sizeof(size)) {
+			 panic("error: unable to snprintf(): size=%d", sizeof(size));
+			 exit(EXIT_FAILURE);
+		}
+		parmList[4] = size;
+		snprintf(carac, size_carac, "%d", imrate);
 		parmList[6] = carac;
-		snprintf(carac, 15, "%d", bitrate);
+		snprintf(carac, size_carac, "%d", bitrate);		     
 		parmList[8] = carac;
-		snprintf(carac, 15, "%d", qscale);
+		snprintf(carac, size_carac, "%d", qscale);
 		parmList[10] = carac;
-		temp = concatenate("udp:", clip);
-		parmList[15] = concatenate(temp, ":1234");
+		if(snprintf(sclip,sizeof(sclip),"udp:%s:1234",clip)
+		     >= sizeof(sclip)) {
+			 panic("error: unable to snprintf(): size=%d", sizeof(sclip));
+			 exit(EXIT_FAILURE);
+		}
+		parmList[15]=sclip;
 		execvp("ffmpeg", parmList);
 		panic("%s",
 		      "Return not expected. Must be an execvp() error.\\n");

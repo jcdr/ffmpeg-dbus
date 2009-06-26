@@ -7,9 +7,14 @@
 #include <signal.h>
 #include <sys/wait.h>
 #include "debug.h"
+
 int debug_level = 1;
 int debug_syslog = 0;
 int debug_console = 1;
+struct point {
+int x;
+int y;
+};
 
 int width = 640, height = 480, imrate = 25, bitrate =
     200, qscale = 6, ok = 0, pid;
@@ -46,10 +51,10 @@ void send_ok(DBusMessage * msg, DBusConnection * conn)
 
 void start(DBusMessage * msg, DBusConnection * conn)
 {
-	debug(2, "size: %dx%d imrate: %d bitrate: %d qscale: %d IP: %s", width,
-	      height, imrate, bitrate, qscale, clip);
-	char carac[16];
-	int size_carac=sizeof(carac);
+	//debug(2, "%d", conn.generation);
+	char im_rate[16];
+	char b_rate[16];
+	char qscl[16];
 	char size[16];
 	char sclip[25];
 	char *parmList[] =
@@ -88,13 +93,26 @@ void start(DBusMessage * msg, DBusConnection * conn)
 			 panic("error: unable to snprintf(): size=%zu", sizeof(size));
 			 exit(EXIT_FAILURE);
 		}
+  
 		parmList[4] = size;
-		snprintf(carac, size_carac, "%d", imrate);
-		parmList[6] = carac;
-		snprintf(carac, size_carac, "%d", bitrate);		     
-		parmList[8] = carac;
-		snprintf(carac, size_carac, "%d", qscale);
-		parmList[10] = carac;
+		if (snprintf(im_rate, sizeof(im_rate), "%d", imrate)
+		     >= sizeof(im_rate)) {
+			 panic("error: unable to snprintf(): size=%zu", sizeof(im_rate));
+			 exit(EXIT_FAILURE);
+		}
+		parmList[6] = im_rate;
+		if (snprintf(b_rate,sizeof(b_rate), "%d", bitrate)
+		     >= sizeof(b_rate)) {
+			 panic("error: unable to snprintf(): size=%zu", sizeof(b_rate));
+			 exit(EXIT_FAILURE);
+		}	     
+		parmList[8] = b_rate;
+		if (snprintf(qscl, sizeof(qscl), "%d", qscale)
+		     >= sizeof(qscl)) {
+			 panic("error: unable to snprintf(): size=%zu", sizeof(qscl));
+			 exit(EXIT_FAILURE);
+		}	
+		parmList[10] = qscl;
 		if(snprintf(sclip,sizeof(sclip),"udp:%s:1234",clip)
 		     >= sizeof(sclip)) {
 			 panic("error: unable to snprintf(): size=%zu", sizeof(sclip));
@@ -129,7 +147,7 @@ void stop(DBusMessage * msg, DBusConnection * conn)
 
 void image_size_set(DBusMessage * msg, DBusConnection * conn)
 {
-	debug(2, "size: %dx%d ", width, height);
+
 	DBusMessageIter args;
 	// read the arguments
 	if (!dbus_message_iter_init(msg, &args)) {
@@ -151,7 +169,6 @@ void image_size_set(DBusMessage * msg, DBusConnection * conn)
 
 void image_size_get(DBusMessage * msg, DBusConnection * conn)
 {
-	debug(2, "size: %dx%d ", width, height);
 	DBusMessage *reply;
 	DBusMessageIter args;
 	dbus_uint32_t serial = 0;
@@ -182,7 +199,6 @@ void image_size_get(DBusMessage * msg, DBusConnection * conn)
 
 void image_rate_set(DBusMessage * msg, DBusConnection * conn)
 {
-	debug(2, "imrate: %d ", imrate);
 	DBusMessageIter args;
 	// read the arguments
 	if (!dbus_message_iter_init(msg, &args)) {
@@ -197,7 +213,6 @@ void image_rate_set(DBusMessage * msg, DBusConnection * conn)
 
 void image_rate_get(DBusMessage * msg, DBusConnection * conn)
 {
-	debug(2, "imrate: %d ", imrate);
 	DBusMessage *reply;
 	DBusMessageIter args;
 	dbus_uint32_t serial = 0;
@@ -224,7 +239,6 @@ void image_rate_get(DBusMessage * msg, DBusConnection * conn)
 
 void bit_rate_set(DBusMessage * msg, DBusConnection * conn)
 {
-	debug(2, "bitrate: %d ", bitrate);
 	DBusMessageIter args;
 	// read the arguments
 	if (!dbus_message_iter_init(msg, &args)) {
@@ -239,7 +253,6 @@ void bit_rate_set(DBusMessage * msg, DBusConnection * conn)
 
 void bit_rate_get(DBusMessage * msg, DBusConnection * conn)
 {
-	debug(2, "bitrate: %d ", bitrate);
 	DBusMessage *reply;
 	DBusMessageIter args;
 	dbus_uint32_t serial = 0;
@@ -266,7 +279,6 @@ void bit_rate_get(DBusMessage * msg, DBusConnection * conn)
 
 void qscale_set(DBusMessage * msg, DBusConnection * conn)
 {
-	debug(2, "qscale: %d ", qscale);
 	DBusMessageIter args;
 	// read the arguments
 	if (!dbus_message_iter_init(msg, &args)) {
@@ -281,7 +293,6 @@ void qscale_set(DBusMessage * msg, DBusConnection * conn)
 
 void qscale_get(DBusMessage * msg, DBusConnection * conn)
 {
-	debug(2, "qscale: %d ", qscale);
 	DBusMessage *reply;
 	DBusMessageIter args;
 	dbus_uint32_t serial = 0;
@@ -308,7 +319,6 @@ void qscale_get(DBusMessage * msg, DBusConnection * conn)
 
 void client_ip_set(DBusMessage * msg, DBusConnection * conn)
 {
-	debug(2, "IP: %s", clip);
 	DBusMessageIter args;
 
 	// read the arguments
@@ -329,7 +339,6 @@ void client_ip_set(DBusMessage * msg, DBusConnection * conn)
 
 void client_ip_get(DBusMessage * msg, DBusConnection * conn)
 {
-	debug(2, "IP: %s", clip);
 	DBusMessage *reply;
 	DBusMessageIter args;
 	dbus_uint32_t serial = 0;
@@ -484,8 +493,6 @@ void listen()
 	DBusConnection *conn;
 	DBusError err;
 	int ret;
-	debug(2, "size: %dx%d imrate: %d bitrate: %d qscale: %d IP: %s", width,
-	      height, imrate, bitrate, qscale, clip);
 	debug(1, "%s", "Listening for method calls\n");
 
 	// initialise the error
@@ -550,8 +557,6 @@ void listen()
 
 int main(int argc, char **argv)
 {
-	debug(2, "size: %dx%d imrate: %d bitrate: %d qscale: %d IP: %s", width,
-	      height, imrate, bitrate, qscale, clip);
 	clip = strdup("127.0.0.1");
 	listen();
 
